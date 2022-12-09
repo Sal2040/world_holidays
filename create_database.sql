@@ -1,3 +1,5 @@
+CREATE DATABASE world_holidays;
+
 \c world_holidays
 
 CREATE TABLE IF NOT EXISTS holiday(
