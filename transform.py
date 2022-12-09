@@ -1,10 +1,5 @@
-from helpers import dict_to_list
 import pandas as pd
-import configparser
-import datetime as dt
-import argparse
 import json
-from google.cloud import storage
 
 content = load_json
 
@@ -44,7 +39,15 @@ data[['country_id','country']] = pd.DataFrame(data['country'].to_list())
 
 holiday_table = data[['holiday_id','name','description','country']]
 
+holiday_type_table = data[['holiday_id','type']].explode('type')
+
+holiday_location_table = data[['holiday_id','location']].explode('location')
+
 holiday_state_table = data[['holiday_id','state']].explode('state')
 holiday_state_table['state'] = holiday_state_table['state'].apply(dict_to_list)
 holiday_state_table.loc[holiday_state_table['state']=='All','state'] = holiday_state_table.loc[holiday_state_table['state']=='All','state'].apply(lambda x: 5*[x])
 holiday_state_table[['state_num','state_abbrev','state_name','state_type','state_id']] = pd.DataFrame(holiday_state_table['state'].to_list())
+holiday_state_table = holiday_state_table[['holiday_id','state_name']]
+
+
+
