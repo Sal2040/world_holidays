@@ -7,7 +7,8 @@ CREATE TABLE IF NOT EXISTS holiday(
     name VARCHAR,
     description VARCHAR,
     country VARCHAR,
-    date TIMESTAMP WITH TIME ZONE
+    date TIMESTAMP WITH TIME ZONE,
+    UNIQUE (name, country, date)
 );
 
 CREATE TABLE IF NOT EXISTS holiday_type(
