@@ -3,70 +3,104 @@ import json
 import configparser
 from google.cloud import storage
 import helpers
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 import psycopg2
+import argparse
+import datetime as dt
 
-CONFIG_FILE = 'pipeline.conf'
+def main():
+    CONFIG_FILE = 'pipeline.conf'
 
-config_parser = configparser.ConfigParser()
-config_parser.read(CONFIG_FILE)
-database = config_parser.get("sql_config", "database")
-user = config_parser.get("sql_config", "user")
-password = config_parser.get("sql_config", "password")
-host = config_parser.get("sql_config", "host")
-port = config_parser.get("sql_config", "port")
+    config_parser = configparser.ConfigParser()
+    config_parser.read(CONFIG_FILE)
+    database = config_parser.get("sql_config", "database")
+    user = config_parser.get("sql_config", "user")
+    password = config_parser.get("sql_config", "password")
+    host = config_parser.get("sql_config", "host")
+    port = config_parser.get("sql_config", "port")
+    bucket_name = config_parser.get("bucket_config", "bucket_name")
 
-conn_string = f'postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}'
-db = create_engine(conn_string)
-conn = db.connect()
+    arg_parser = argparse.ArgumentParser()
+    default_blob = dt.datetime.now().strftime("%Y-%m-%d") + ".json"
+    arg_parser.add_argument("--source_blob", default=f"{default_blob}", required=True)
+    args = arg_parser.parse_args()
+    source_blob_name = args.source_blob
 
-content = load_json
+    conn_string = f'postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}'
+    db = create_engine(conn_string)
+    conn = db.connect()
 
-name = []
-description = []
-country = []
-date = []
-type_ = []
-location = []
-state = []
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(source_blob_name)
 
-for holiday in content['response']['holidays']:
-    name.append(holiday['name'])
-    description.append(holiday['description'])
-    country.append(holiday['country'])
-    date.append(holiday['date']['iso'])
-    type_.append(holiday['type'])
-    location.append(holiday['locations'])
-    state.append(holiday['states'])
+    content = blob.download_as_string()
+    content = json.loads(content)
 
-data = pd.DataFrame({
-    'name': name,
-    'description': description,
-    'country': country,
-    'date': date,
-    'type': type_,
-    'location': location,
-    'state': state
-})
+    query_string = text("SELECT MAX(HOLIDAY_ID) FROM HOLIDAY")
+    res = conn.execute(query_string)
+    last_holiday_id = res.fetchall()
+    last_holiday_id = last_holiday_id[0][0]
+    if last_holiday_id:
+        start_holiday_id = last_holiday_id + 1
+    else:
+        start_holiday_id = 0
 
-last_holiday_id = ...
+    name = []
+    description = []
+    country = []
+    date = []
+    type_ = []
+    location = []
+    state = []
 
-data['holiday_id'] = range(last_holiday_id, len(data) + last_holiday_id)
+    for holiday in content['response']['holidays']:
+        name.append(holiday['name'])
+        description.append(holiday['description'])
+        country.append(holiday['country'])
+        date.append(holiday['date']['iso'])
+        type_.append(holiday['type'])
+        location.append(holiday['locations'])
+        state.append(holiday['states'])
 
-data['country'] = data['country'].apply(helpers.dict_to_list)
-data[['country_id','country']] = pd.DataFrame(data['country'].to_list())
+    data = pd.DataFrame({
+        'name': name,
+        'description': description,
+        'country': country,
+        'date': date,
+        'type': type_,
+        'location': location,
+        'state': state
+    })
 
-holiday_table = data[['holiday_id','name','description','country','date']]
 
-holiday_type_table = data[['holiday_id','type']].explode('type')
 
-holiday_location_table = data[['holiday_id','location']].explode('location')
+    data['holiday_id'] = range(start_holiday_id, start_holiday_id + len(data))
 
-holiday_state_table = data[['holiday_id','state']].explode('state')
-holiday_state_table['state'] = holiday_state_table['state'].apply(helpers.dict_to_list)
-holiday_state_table.loc[holiday_state_table['state']=='All','state'] = holiday_state_table.loc[holiday_state_table['state']=='All','state'].apply(lambda x: 5*[x])
-holiday_state_table[['state_num','state_abbrev','state_name','state_type','state_id']] = pd.DataFrame(holiday_state_table['state'].to_list())
-holiday_state_table = holiday_state_table[['holiday_id','state_name']]
+    data['country'] = data['country'].apply(helpers.dict_to_list)
+    data[['country_id','country']] = pd.DataFrame(data['country'].to_list())
 
+    holiday_table = data[['holiday_id','name','description','country','date']]
+
+    holiday_type_table = data[['holiday_id','type']].explode('type')
+
+    holiday_location_table = data[['holiday_id','location']].explode('location')
+
+    holiday_state_table = data[['holiday_id','state']].explode('state')
+    holiday_state_table['state'] = holiday_state_table['state'].apply(helpers.dict_to_list)
+    holiday_state_table.loc[holiday_state_table['state']=='All','state'] = holiday_state_table.loc[holiday_state_table['state']=='All','state'].apply(lambda x: 5*[x])
+    holiday_state_table[['state_num','state_abbrev','state_name','state_type','state_id']] = pd.DataFrame(holiday_state_table['state'].to_list())
+    holiday_state_table = holiday_state_table[['holiday_id','state_name']].rename(mapper={'state_name':'state'}, axis=1)
+
+    holiday_table.to_sql('holiday', con=conn, index=False, if_exists='append')
+    holiday_type_table.to_sql('holiday_type', con=conn, index=False, if_exists='append')
+    holiday_location_table.to_sql('holiday_location', con=conn, index=False, if_exists='append')
+    holiday_state_table.to_sql('holiday_state', con=conn, index=False, if_exists='append')
+
+
+    conn.close()
+
+if __name__=="__main__":
+    main()
 
 
