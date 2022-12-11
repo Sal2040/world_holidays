@@ -89,8 +89,12 @@ def main():
     holiday_state_table = data[['holiday_id','state']].explode('state')
     holiday_state_table['state'] = holiday_state_table['state'].apply(helpers.dict_to_list)
     holiday_state_table.loc[holiday_state_table['state']=='All','state'] = holiday_state_table.loc[holiday_state_table['state']=='All','state'].apply(lambda x: 5*[x])
+    holiday_state_table.reset_index(inplace=True, drop=True)
     holiday_state_table[['state_num','state_abbrev','state_name','state_type','state_id']] = pd.DataFrame(holiday_state_table['state'].to_list())
     holiday_state_table = holiday_state_table[['holiday_id','state_name']].rename(mapper={'state_name':'state'}, axis=1)
+    holiday_state_table = holiday_state_table.groupby('holiday_id')['state'].apply(list).reset_index()
+    holiday_state_table = holiday_state_table.explode('state')
+
 
     holiday_table.to_sql('holiday', con=conn, index=False, if_exists='append')
     holiday_type_table.to_sql('holiday_type', con=conn, index=False, if_exists='append')
