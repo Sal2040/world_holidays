@@ -2,7 +2,7 @@ import pandas as pd
 import json
 import configparser
 from google.cloud import storage
-import helpers
+from helpers import dict_to_list
 from sqlalchemy import create_engine, text
 import psycopg2
 import argparse
@@ -77,30 +77,22 @@ def main():
 
     data['holiday_id'] = range(start_holiday_id, start_holiday_id + len(data))
 
-    data['country'] = data['country'].apply(helpers.dict_to_list)
+    data['country'] = data['country'].apply(dict_to_list)
     data[['country_id','country']] = pd.DataFrame(data['country'].to_list())
 
     holiday_table = data[['holiday_id','name','description','country','date']]
 
-    holiday_type_table = data[['holiday_id','type']].explode('type')
-
-    holiday_location_table = data[['holiday_id','location']].explode('location')
-
-    holiday_state_table = data[['holiday_id','state']].explode('state')
-    holiday_state_table['state'] = holiday_state_table['state'].apply(helpers.dict_to_list)
-    holiday_state_table.loc[holiday_state_table['state']=='All','state'] = holiday_state_table.loc[holiday_state_table['state']=='All','state'].apply(lambda x: 5*[x])
-    holiday_state_table.reset_index(inplace=True, drop=True)
-    holiday_state_table[['state_num','state_abbrev','state_name','state_type','state_id']] = pd.DataFrame(holiday_state_table['state'].to_list())
-    holiday_state_table = holiday_state_table[['holiday_id','state_name']].rename(mapper={'state_name':'state'}, axis=1)
-    holiday_state_table = holiday_state_table.groupby('holiday_id')['state'].apply(list).reset_index()
-    holiday_state_table = holiday_state_table.explode('state')
-
+    holiday_state_type_table = data[['holiday_id', 'state', 'type']].explode('state')
+    holiday_state_type_table = holiday_state_type_table.explode('type')
+    holiday_state_type_table['state'] = holiday_state_type_table['state'].apply(dict_to_list)
+    holiday_state_type_table.loc[holiday_state_type_table['state'] == 'All', 'state'] = holiday_state_type_table.loc[holiday_state_type_table['state'] == 'All', 'state'].apply(lambda x: 5 * [x])
+    holiday_state_type_table.reset_index(inplace=True, drop=True)
+    holiday_state_type_table[['state_num', 'state_abbrev', 'state_name', 'state_type', 'state_id']] = pd.DataFrame(holiday_state_type_table['state'].to_list())
+    holiday_state_type_table = holiday_state_type_table[['holiday_id', 'state_name', 'type']]
+    holiday_state_type_table.rename(columns={'state_name':'state'}, inplace=True)
 
     holiday_table.to_sql('holiday', con=conn, index=False, if_exists='append')
-    holiday_type_table.to_sql('holiday_type', con=conn, index=False, if_exists='append')
-    holiday_location_table.to_sql('holiday_location', con=conn, index=False, if_exists='append')
-    holiday_state_table.to_sql('holiday_state', con=conn, index=False, if_exists='append')
-
+    holiday_state_type_table.to_sql('holiday_state_type', con=conn, index=False, if_exists='append')
 
     conn.close()
 
