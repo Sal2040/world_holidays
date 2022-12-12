@@ -73,14 +73,25 @@ def main():
         'state': state
     })
 
+    indices_dict = {}
+    indices_list = []
+    top_index = start_holiday_id
+    for index, row in data.iterrows():
+        holiday_date = row['name'] + "_" + row['date']
+        try:
+            indices_list.append(indices_dict[holiday_date])
+        except:
+            indices_list.append(top_index)
+            indices_dict[holiday_date] = top_index
+            top_index += 1
 
-
-    data['holiday_id'] = range(start_holiday_id, start_holiday_id + len(data))
+    data['holiday_id'] = indices_list
 
     data['country'] = data['country'].apply(dict_to_list)
     data[['country_id','country']] = pd.DataFrame(data['country'].to_list())
 
     holiday_table = data[['holiday_id','name','description','country','date']]
+    holiday_table = holiday_table.drop_duplicates(subset='holiday_id')
 
     holiday_state_type_table = data[['holiday_id', 'state', 'type']].explode('state')
     holiday_state_type_table = holiday_state_type_table.explode('type')
