@@ -2,7 +2,7 @@ import pandas as pd
 import json
 import configparser
 from google.cloud import storage
-from helpers import dict_to_list
+from helpers import dict_to_list, df_to_sql
 from sqlalchemy import create_engine, text
 import psycopg2
 import argparse
@@ -21,8 +21,7 @@ def main():
     bucket_name = config_parser.get("bucket_config", "bucket_name")
 
     arg_parser = argparse.ArgumentParser()
-    default_blob = dt.datetime.now().strftime("%Y-%m-%d") + ".json"
-    arg_parser.add_argument("--source_blob", default=f"{default_blob}", required=True)
+    arg_parser.add_argument("--source_blob", required=True)
     args = arg_parser.parse_args()
     source_blob_name = args.source_blob
 
@@ -102,8 +101,13 @@ def main():
     holiday_state_type_table = holiday_state_type_table[['holiday_id', 'state_name', 'type']]
     holiday_state_type_table.rename(columns={'state_name':'state'}, inplace=True)
 
-    holiday_table.to_sql('holiday', con=conn, index=False, if_exists='append')
-    holiday_state_type_table.to_sql('holiday_state_type', con=conn, index=False, if_exists='append')
+    # holiday_table.to_sql('holiday', con=conn, index=False, if_exists='append')
+    # holiday_state_type_table.to_sql('holiday_state_type', con=conn, index=False, if_exists='append')
+
+    #dodelat messaging
+    df_to_sql(df=holiday_table, sql_table='holiday', con=conn, returning_col='holiday_id')
+    df_to_sql(df=holiday_state_type_table, sql_table='holiday_state_type', con=conn)
+
 
     conn.close()
 
