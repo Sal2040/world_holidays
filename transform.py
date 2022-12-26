@@ -120,8 +120,6 @@ def main():
     print(f"{len(holiday_loaded_ids)} out of {len(holiday_table)} uploaded to database.")
     print(f"{len(holiday_state_type_loaded_ids)} out of {len(holiday_state_type_table)} uploaded to database.")
 
-##AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-
 if __name__=="__main__":
     main()
 
