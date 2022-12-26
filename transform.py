@@ -101,15 +101,24 @@ def main():
     holiday_state_type_table = holiday_state_type_table[['holiday_id', 'state_name', 'type']]
     holiday_state_type_table.rename(columns={'state_name':'state'}, inplace=True)
 
-    # holiday_table.to_sql('holiday', con=conn, index=False, if_exists='append')
-    # holiday_state_type_table.to_sql('holiday_state_type', con=conn, index=False, if_exists='append')
 
-    #dodelat messaging
-    df_to_sql(df=holiday_table, sql_table='holiday', con=conn, returning_col='holiday_id')
-    df_to_sql(df=holiday_state_type_table, sql_table='holiday_state_type', con=conn)
+    holiday_loaded_ids = df_to_sql(df=holiday_table,
+                               sql_table='holiday',
+                               con=conn,
+                               returning_col='holiday_id')
 
+    valid_ids = [i[0] for i in holiday_loaded_ids]
+    holiday_state_type_table_filtered = holiday_state_type_table[holiday_state_type_table['holiday_id'].isin(valid_ids)]
+
+    holiday_state_type_loaded_ids = df_to_sql(df=holiday_state_type_table_filtered,
+                                          sql_table='holiday_state_type',
+                                          con=conn,
+                                          returning_col='holiday_id')
 
     conn.close()
+
+    print(f"{len(holiday_loaded_ids)} out of {len(holiday_table)} uploaded to database.")
+    print(f"{len(holiday_state_type_loaded_ids)} out of {len(holiday_state_type_table)} uploaded to database.")
 
 if __name__=="__main__":
     main()

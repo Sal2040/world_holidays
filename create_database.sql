@@ -4,15 +4,16 @@ CREATE DATABASE world_holidays;
 
 CREATE TABLE IF NOT EXISTS holiday(
     holiday_id SERIAL PRIMARY KEY,
-    name VARCHAR,
+    name VARCHAR NOT NULL,
     description VARCHAR,
-    country VARCHAR,
-    date TIMESTAMP WITH TIME ZONE,
+    country VARCHAR NOT NULL,
+    date TIMESTAMP WITH TIME ZONE NOT NULL,
     UNIQUE (name, country, date)
 );
 
 CREATE TABLE IF NOT EXISTS holiday_state_type(
-    holiday_id INT REFERENCES holiday(holiday_id),
-    state VARCHAR,
-    type VARCHAR
+    holiday_id INT REFERENCES holiday(holiday_id) NOT NULL,
+    state VARCHAR NOT NULL,
+    type VARCHAR NOT NULL,
+    UNIQUE(holiday_id, state, type)
 );
