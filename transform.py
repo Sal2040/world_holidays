@@ -2,7 +2,7 @@ import pandas as pd
 import json
 import configparser
 from google.cloud import storage
-from helpers import dict_to_list, df_to_sql
+from helpers import dict_to_list
 from sqlalchemy import create_engine, text
 import psycopg2
 import argparse
@@ -22,8 +22,10 @@ def main():
 
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("--source_blob", required=True)
+    arg_parser.add_argument("--destination_blob", required=True)
     args = arg_parser.parse_args()
     source_blob_name = args.source_blob
+    destination_blob_name = args.destination_blob
 
     conn_string = f'postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}'
     db = create_engine(conn_string)
@@ -44,6 +46,7 @@ def main():
         start_holiday_id = last_holiday_id + 1
     else:
         start_holiday_id = 0
+    conn.close()
 
     name = []
     description = []
@@ -101,24 +104,17 @@ def main():
     holiday_state_type_table = holiday_state_type_table[['holiday_id', 'state_name', 'type']]
     holiday_state_type_table.rename(columns={'state_name':'state'}, inplace=True)
 
+    holiday_blob_name = 'holiday_table_' + destination_blob_name
+    holiday_state_type_blob_name = 'holiday_state_type_table_' + destination_blob_name
 
-    holiday_loaded_ids = df_to_sql(df=holiday_table,
-                               sql_table='holiday',
-                               con=conn,
-                               returning_col='holiday_id')
+    blob_holiday = bucket.blob(holiday_blob_name)
+    blob_holiday_state_type = bucket.blob(holiday_state_type_blob_name)
 
-    valid_ids = [i[0] for i in holiday_loaded_ids]
-    holiday_state_type_table_filtered = holiday_state_type_table[holiday_state_type_table['holiday_id'].isin(valid_ids)]
+    blob_holiday.upload_from_string(holiday_table.to_csv(), 'text/csv')
+    print("Holiday table uploaded to bucket.")
 
-    holiday_state_type_loaded_ids = df_to_sql(df=holiday_state_type_table_filtered,
-                                          sql_table='holiday_state_type',
-                                          con=conn,
-                                          returning_col='holiday_id')
-
-    conn.close()
-
-    print(f"{len(holiday_loaded_ids)} out of {len(holiday_table)} uploaded to database.")
-    print(f"{len(holiday_state_type_loaded_ids)} out of {len(holiday_state_type_table)} uploaded to database.")
+    blob_holiday_state_type.upload_from_string(holiday_state_type_table.to_csv(), 'text/csv')
+    print("Holiday_state_type table uploaded to bucket.")
 
 if __name__=="__main__":
     main()
