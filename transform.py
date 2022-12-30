@@ -110,10 +110,10 @@ def main():
     blob_holiday = bucket.blob(holiday_blob_name)
     blob_holiday_state_type = bucket.blob(holiday_state_type_blob_name)
 
-    blob_holiday.upload_from_string(holiday_table.to_csv(), 'text/csv')
+    blob_holiday.upload_from_string(holiday_table.to_csv(index=False, header=False), 'text/csv')
     print("Holiday table uploaded to bucket.")
 
-    blob_holiday_state_type.upload_from_string(holiday_state_type_table.to_csv(), 'text/csv')
+    blob_holiday_state_type.upload_from_string(holiday_state_type_table.to_csv(index=False, header=False), 'text/csv')
     print("Holiday_state_type table uploaded to bucket.")
 
 if __name__=="__main__":
