@@ -56,6 +56,19 @@ blob.download_to_file(file_obj)
 file_obj.seek(0)
 
 cur = conn.cursor()
-cur.copy_expert("COPY HOLIDAY FROM STDIN WITH CSV", file_obj)
+cur.execute(
+    '''
+    CREATE TEMP TABLE tmp_table 
+    (LIKE holiday)
+    '''
+)
+cur.copy_expert("COPY tmp_table FROM STDIN WITH CSV", file_obj)
+cur.execute(
+    '''
+    INSERT INTO holiday
+    SELECT * FROM tmp_table
+    ON CONFLICT DO NOTHING
+    '''
+)
 
 conn.close()
