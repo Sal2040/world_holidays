@@ -71,4 +71,6 @@ cur.execute(
     '''
 )
 
+# dodelat messaging z RETURN
+
 conn.close()
