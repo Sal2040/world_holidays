@@ -7,6 +7,7 @@ from sqlalchemy import create_engine, text
 import psycopg2
 import argparse
 import datetime as dt
+import os
 
 def main():
     CONFIG_FILE = 'pipeline.conf'
@@ -29,6 +30,7 @@ def main():
     db = create_engine(conn_string)
     conn = db.connect()
 
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/home/sal/PROJEKTY_CV/world_holidays/worldholidays-370021-b43ad8c40083.json'
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(source_blob_name)

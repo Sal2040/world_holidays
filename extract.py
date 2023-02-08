@@ -4,6 +4,7 @@ import datetime as dt
 import argparse
 import json
 from google.cloud import storage
+import os
 
 def main():
     CONFIG_FILE = 'pipeline.conf'
@@ -22,11 +23,14 @@ def main():
     args = arg_parser.parse_args()
     country, year, month, day = args.country, args.year, args.month, args.day
 
-    destination_blob_name = dt.datetime.now().strftime("%Y-%m-%d") + ".json"
+#    destination_blob_name = dt.datetime.now().strftime("%Y-%m-%d") + f"_{country}" + f"_{year}" + ".json"
+    destination_blob_name = f"{country}" + f"_{year}" + ".json"
+
 
     r = requests.get(f"https://calendarific.com/api/v2/holidays?&api_key={api_key}&country={country}&year={year}&month={month}&day={day}")
     contents = json.dumps(r.json())
 
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/home/sal/PROJEKTY_CV/world_holidays/worldholidays-370021-b43ad8c40083.json'
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
