@@ -30,7 +30,7 @@ def main():
     r = requests.get(f"https://calendarific.com/api/v2/holidays?&api_key={api_key}&country={country}&year={year}&month={month}&day={day}")
     contents = json.dumps(r.json())
 
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/home/sal/PROJEKTY_CV/world_holidays/worldholidays-370021-b43ad8c40083.json'
+#    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/home/sal/PROJEKTY_CV/world_holidays/worldholidays-370021-b43ad8c40083.json'
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
     blob = bucket.blob(destination_blob_name)
