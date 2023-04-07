@@ -2,6 +2,8 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import table, column
 import smtplib
 from email.mime.text import MIMEText
+import configparser
+import datetime as dt
 
 def dict_to_list(dictionary):
     if not isinstance(dictionary, dict):
@@ -33,3 +35,10 @@ def send_email(subject, body, sender, recipients, password):
     smtp_server.sendmail(sender, recipients, msg.as_string())
     smtp_server.quit()
 
+def read_config(config_file):
+    config_parser = configparser.ConfigParser()
+    config_parser.read(config_file)
+    return config_parser
+
+def next_year():
+    return [dt.datetime.now().isocalendar()[0] + 1]

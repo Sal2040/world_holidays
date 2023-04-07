@@ -10,7 +10,7 @@ import datetime as dt
 import os
 
 def main():
-    CONFIG_FILE = 'pipeline.conf'
+    CONFIG_FILE = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
 
     config_parser = configparser.ConfigParser()
     config_parser.read(CONFIG_FILE)
