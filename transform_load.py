@@ -1,52 +1,56 @@
 import pandas as pd
 import json
-import configparser
 from google.cloud import storage
-from helpers import dict_to_list, df_to_sql
+from helpers import dict_to_list, df_to_sql, read_config, next_year, blob_names, get_connection
 from sqlalchemy import create_engine, text
-import psycopg2
-import argparse
-import datetime as dt
 import os
+from ast import literal_eval
+from sqlalchemy.exc import SQLAlchemyError
 
-def main():
-    CONFIG_FILE = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
+def get_config_values(config_parser):
+    try:
+        database = config_parser.get("sql_config", "database")
+        user = config_parser.get("sql_config", "user")
+        password = config_parser.get("sql_config", "password")
+        host = config_parser.get("sql_config", "host")
+        port = config_parser.get("sql_config", "port")
+        bucket_name = config_parser.get("bucket_config", "bucket_name")
+        countries = literal_eval(config_parser.get("request_config", "countries"))
+        years = literal_eval(config_parser.get("request_config", "years"))
+        service_key = config_parser.get("bucket_config", "service_key")
+    except Exception as e:
+        print(f"Reading configuration failed: {e}")
+        raise
+    if not years:
+        years = next_year()
+    return database, user, password, host, port, bucket_name, countries, years, service_key
 
-    config_parser = configparser.ConfigParser()
-    config_parser.read(CONFIG_FILE)
-    database = config_parser.get("sql_config", "database")
-    user = config_parser.get("sql_config", "user")
-    password = config_parser.get("sql_config", "password")
-    host = config_parser.get("sql_config", "host")
-    port = config_parser.get("sql_config", "port")
-    bucket_name = config_parser.get("bucket_config", "bucket_name")
+def fetch_content(bucket_name, source_blob):
+    try:
+        storage_client = storage.Client()
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(source_blob)
+        content = blob.download_as_string()
+        return json.loads(content)
+    except Exception as e:
+        print(f"Error fetching data from storage: {e}")
+        raise
 
-    arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument("--source_blob", required=True)
-    args = arg_parser.parse_args()
-    source_blob_name = args.source_blob
-
-    conn_string = f'postgresql+psycopg2://{user}:{password}@{host}:{port}/{database}'
-    db = create_engine(conn_string)
-    conn = db.connect()
-
-    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/home/sal/PROJEKTY_CV/world_holidays/worldholidays-370021-b43ad8c40083.json'
-    storage_client = storage.Client()
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(source_blob_name)
-
-    content = blob.download_as_string()
-    content = json.loads(content)
-
+def start_holiday(conn):
     query_string = text("SELECT MAX(HOLIDAY_ID) FROM HOLIDAY")
-    res = conn.execute(query_string)
+    try:
+        res = conn.execute(query_string)
+    except SQLAlchemyError as e:
+        raise SQLAlchemyError(f"An error occurred while reading holiday index from database: {e}")
+
     last_holiday_id = res.fetchall()
     last_holiday_id = last_holiday_id[0][0]
     if last_holiday_id:
-        start_holiday_id = last_holiday_id + 1
+        return last_holiday_id + 1
     else:
-        start_holiday_id = 0
+        return 0
 
+def transform(content, start_holiday_id):
     name = []
     description = []
     country = []
@@ -103,24 +107,42 @@ def main():
     holiday_state_type_table = holiday_state_type_table[['holiday_id', 'state_name', 'type']]
     holiday_state_type_table.rename(columns={'state_name':'state'}, inplace=True)
 
+    return holiday_table, holiday_state_type_table
 
+
+def upload_to_database(holiday_table, holiday_state_type_table, conn):
     holiday_loaded_ids = df_to_sql(df=holiday_table,
                                sql_table='holiday',
-                               con=conn,
+                               conn=conn,
                                returning_col='holiday_id')
-
     valid_ids = [i[0] for i in holiday_loaded_ids]
     holiday_state_type_table_filtered = holiday_state_type_table[holiday_state_type_table['holiday_id'].isin(valid_ids)]
-
     holiday_state_type_loaded_ids = df_to_sql(df=holiday_state_type_table_filtered,
                                           sql_table='holiday_state_type',
-                                          con=conn,
+                                          conn=conn,
                                           returning_col='holiday_id')
-
-    conn.close()
-
     print(f"{len(holiday_loaded_ids)} out of {len(holiday_table)} uploaded to database.")
     print(f"{len(holiday_state_type_loaded_ids)} out of {len(holiday_state_type_table)} uploaded to database.")
+
+def main():
+    CONFIG_FILE = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
+
+    config_parser = read_config(CONFIG_FILE)
+    database, user, password, host, port, bucket_name, countries, years, service_key = get_config_values(config_parser)
+    if service_key:
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = service_key
+
+    conn = get_connection(user, password, host, port, database)
+    blobs = blob_names(countries, years)
+
+    for country, year in blobs:
+        source_blob = f"{country}_{year}.json"
+        content = fetch_content(bucket_name, source_blob)
+        start_holiday_id = start_holiday(conn)
+        holiday_table, holiday_state_type_table = transform(content, start_holiday_id)
+        upload_to_database(holiday_table, holiday_state_type_table, conn)
+
+    conn.close()
 
 if __name__=="__main__":
     main()

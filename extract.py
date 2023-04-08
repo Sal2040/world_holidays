@@ -2,9 +2,22 @@ import requests
 import json
 from google.cloud import storage
 import os
-from helpers import read_config, next_year
+from helpers import read_config, next_year, blob_names
 from ast import literal_eval
 
+def get_config_values(config_parser):
+    try:
+        api_key = config_parser.get("request_config", "api_key")
+        bucket_name = config_parser.get("bucket_config", "bucket_name")
+        service_key = config_parser.get("bucket_config", "service_key")
+        countries = literal_eval(config_parser.get("request_config", "countries"))
+        years = literal_eval(config_parser.get("request_config", "years"))
+    except Exception as e:
+        print(f"Reading configuration failed: {e}")
+        raise
+    if not years:
+        years = next_year()
+    return api_key, bucket_name, service_key, countries, years
 
 def fetch_holidays(api_key, year, country):
     url = f"https://calendarific.com/api/v2/holidays?&api_key={api_key}&country={country}&year={year}"
@@ -24,7 +37,6 @@ def fetch_holidays(api_key, year, country):
         print("Holidays fetched.")
         return json.dumps(result)
 
-
 def upload_to_storage(content, bucket_name, destination_blob_name):
     try:
         storage_client = storage.Client()
@@ -36,20 +48,6 @@ def upload_to_storage(content, bucket_name, destination_blob_name):
         print(f"Error uploading to storage: {e}")
         raise
 
-def get_config_values(config_parser):
-    try:
-        api_key = config_parser.get("request_config", "api_key")
-        bucket_name = config_parser.get("bucket_config", "bucket_name")
-        service_key = config_parser.get("bucket_config", "service_key")
-        countries = literal_eval(config_parser.get("request_config", "countries"))
-        years = literal_eval(config_parser.get("request_config", "years"))
-    except Exception as e:
-        print(f"Reading configuration failed: {e}")
-        raise
-    if not years:
-        years = next_year()
-    return api_key, bucket_name, service_key, countries, years
-
 def main():
     CONFIG_FILE = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
 
@@ -59,11 +57,12 @@ def main():
     if service_key:
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = service_key
 
-    for country in countries:
-        for year in years:
-            destination_blob_name = f"{country}_{year}.json"
-            content = fetch_holidays(api_key, year, country)
-            upload_to_storage(content, bucket_name, destination_blob_name)
+    blobs = blob_names(countries, years)
+
+    for country, year in blobs:
+        destination_blob_name = f"{country}_{year}.json"
+        content = fetch_holidays(api_key, year, country)
+        upload_to_storage(content, bucket_name, destination_blob_name)
 
 if __name__=="__main__":
     main()
