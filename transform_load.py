@@ -36,7 +36,7 @@ def fetch_content(bucket_name, source_blob):
         print(f"Error fetching data from storage: {e}")
         raise
 
-def start_holiday(conn):
+def last_index(conn):
     query_string = text("SELECT MAX(HOLIDAY_ID) FROM HOLIDAY")
     try:
         res = conn.execute(query_string)
@@ -50,7 +50,7 @@ def start_holiday(conn):
     else:
         return 0
 
-def transform(content, start_holiday_id):
+def json_to_df(content):
     name = []
     description = []
     country = []
@@ -77,11 +77,13 @@ def transform(content, start_holiday_id):
         'location': location,
         'state': state
     })
+    return data
 
+def generate_indices(df, first_index):
     indices_dict = {}
     indices_list = []
-    top_index = start_holiday_id
-    for index, row in data.iterrows():
+    top_index = first_index
+    for index, row in df.iterrows():
         holiday_date = row['name'] + "_" + row['date']
         try:
             indices_list.append(indices_dict[holiday_date])
@@ -89,16 +91,17 @@ def transform(content, start_holiday_id):
             indices_list.append(top_index)
             indices_dict[holiday_date] = top_index
             top_index += 1
+    return indices_list
 
-    data['holiday_id'] = indices_list
+def construct_tables(df, indices):
+    df['holiday_id'] = indices
+    df['country'] = df['country'].apply(dict_to_list)
+    df[['country_id','country']] = pd.DataFrame(df['country'].to_list())
 
-    data['country'] = data['country'].apply(dict_to_list)
-    data[['country_id','country']] = pd.DataFrame(data['country'].to_list())
-
-    holiday_table = data[['holiday_id','name','description','country','date']]
+    holiday_table = df[['holiday_id','name','description','country','date']]
     holiday_table = holiday_table.drop_duplicates(subset='holiday_id')
 
-    holiday_state_type_table = data[['holiday_id', 'state', 'type']].explode('state')
+    holiday_state_type_table = df[['holiday_id', 'state', 'type']].explode('state')
     holiday_state_type_table = holiday_state_type_table.explode('type')
     holiday_state_type_table['state'] = holiday_state_type_table['state'].apply(dict_to_list)
     holiday_state_type_table.loc[holiday_state_type_table['state'] == 'All', 'state'] = holiday_state_type_table.loc[holiday_state_type_table['state'] == 'All', 'state'].apply(lambda x: 5 * [x])
@@ -138,8 +141,10 @@ def main():
     for country, year in blobs:
         source_blob = f"{country}_{year}.json"
         content = fetch_content(bucket_name, source_blob)
-        start_holiday_id = start_holiday(conn)
-        holiday_table, holiday_state_type_table = transform(content, start_holiday_id)
+        df = json_to_df(content)
+        first_index = last_index(conn)
+        indices = generate_indices(df, first_index)
+        holiday_table, holiday_state_type_table = construct_tables(df, indices)
         upload_to_database(holiday_table, holiday_state_type_table, conn)
 
     conn.close()
