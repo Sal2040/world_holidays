@@ -50,6 +50,9 @@ def read_config(config_file):
 def next_year():
     return [dt.datetime.now().isocalendar()[0] + 1]
 
+def next_week():
+    return dt.datetime.now().isocalendar()[1]+1
+
 def blob_names(countries, years):
     try:
         for country in countries:

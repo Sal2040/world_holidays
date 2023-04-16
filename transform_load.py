@@ -2,7 +2,7 @@ import pandas as pd
 import json
 from google.cloud import storage
 from helpers import dict_to_list, df_to_sql, read_config, next_year, blob_names, get_connection
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 import os
 from ast import literal_eval
 from sqlalchemy.exc import SQLAlchemyError
@@ -41,10 +41,11 @@ def last_index(conn):
     try:
         res = conn.execute(query_string)
     except SQLAlchemyError as e:
-        raise SQLAlchemyError(f"An error occurred while reading holiday index from database: {e}")
-
+        print(f"An error occurred while reading holiday index from database: {e}")
+        raise
     last_holiday_id = res.fetchall()
     last_holiday_id = last_holiday_id[0][0]
+    conn.close()
     if last_holiday_id:
         return last_holiday_id + 1
     else:

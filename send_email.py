@@ -1,44 +1,29 @@
-from helpers import send_email
-import configparser
-import psycopg2
+from helpers import send_email, read_config, get_connection, next_week
 import pandas as pd
-import datetime as dt
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from ast import literal_eval
 
-def main():
-    #get configurations
-    CONFIG_FILE = 'pipeline.conf'
+def get_config_values(config_parser):
+    try:
+        sender = config_parser.get("gmail_config", "sender")
+        email_password = config_parser.get("gmail_config", "password")
+        recipients = literal_eval(config_parser.get("gmail_config", "recipients"))
+        countries = literal_eval(config_parser.get("query_config", "countries"))
+        types = literal_eval(config_parser.get("query_config", "types"))
+        database = config_parser.get("sql_config", "database")
+        user = config_parser.get("sql_config", "user")
+        sql_password = config_parser.get("sql_config", "password")
+        host = config_parser.get("sql_config", "host")
+        port = config_parser.get("sql_config", "port")
+    except Exception as e:
+        print(f"Reading configuration failed: {e}")
+        raise
+    return sender, email_password, recipients, countries, types, database, user, sql_password, host, port
 
-    config_parser = configparser.ConfigParser()
-    config_parser.read(CONFIG_FILE)
-
-    #email
-    sender = config_parser.get("gmail_config", "sender")
-    email_password = config_parser.get("gmail_config", "password")
-    recipients = eval(config_parser.get("gmail_config", "recipients"))
-
-    #database query
-    countries = eval(config_parser.get("query_config", "countries"))
-    types = eval(config_parser.get("query_config", "types"))
-
-    #database config
-    database = config_parser.get("sql_config", "database")
-    user = config_parser.get("sql_config", "user")
-    sql_password = config_parser.get("sql_config", "password")
-    host = config_parser.get("sql_config", "host")
-    port = config_parser.get("sql_config", "port")
-
-    conn = psycopg2.connect(
-        database=database,
-        user=user,
-        password=sql_password,
-        host=host,
-        port=port
-    )
-    conn.autocommit = True
-    cur = conn.cursor()
-
-    next_week = dt.datetime.now().isocalendar()[1]+1
-    sql = """
+def fetch_data(conn, week, types, countries):
+    query_string = text(
+            """
             SELECT
                 a.date::date,
                 a.country,
@@ -48,28 +33,41 @@ def main():
             FROM holiday a
             RIGHT OUTER JOIN holiday_state_type b
             ON a.holiday_id = b.holiday_id
-            WHERE EXTRACT('week' FROM date) = %s
+            WHERE EXTRACT('week' FROM date) = :week
             AND
-            b.type IN %s
+            b.type IN :types
             AND
-            a.country IN %s
+            a.country IN :countries
             ORDER BY a.date
             """
-    cur.execute(sql, (next_week, types, countries))
-    res = cur.fetchall()
+            )
+    try:
+        res = conn.execute(query_string, {"week":week, "types":types, "countries":countries})
+    except SQLAlchemyError as e:
+        print(f"An error occurred while reading data from database: {e}")
+        raise
+    data = res.fetchall()
     conn.close()
+    return data
 
-    if len(res)==0:
+def create_body(raw_data):
+    if len(raw_data)==0:
         body = "No holidays this week"
     else:
-        data = pd.DataFrame(res, columns=['date', 'country', 'name', 'state', 'type'])
+        data = pd.DataFrame(raw_data, columns=['date', 'country', 'name', 'state', 'type'])
         body = data.to_string()
+    return body
 
+def main():
+    CONFIG_FILE = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
+    config_parser = read_config(CONFIG_FILE)
+    sender, email_password, recipients, countries, types, database, user, sql_password, host, port = get_config_values(config_parser)
+    conn = get_connection(user, sql_password, host, port, database)
+    week = next_week()
+    raw_data = fetch_data(conn, week, types, countries)
+    body = create_body(raw_data)
     subject = f"Holidays on {next_week}th week"
-    sender = sender
-    recipients = recipients
-    password = email_password
-    send_email(subject, body, sender, recipients, password)
+    send_email(subject, body, sender, recipients, email_password)
 
 if __name__=="__main__":
     main()
