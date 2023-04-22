@@ -45,7 +45,6 @@ def last_index(conn):
         raise
     last_holiday_id = res.fetchall()
     last_holiday_id = last_holiday_id[0][0]
-    conn.close()
     if last_holiday_id:
         return last_holiday_id + 1
     else:
