@@ -54,7 +54,6 @@ def upload_to_storage(content, bucket_name, destination_blob_name):
 # Main function
 def main():
     config_file = os.environ.get("WH_CONFIG")
-#    config_file = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
 
     config_parser = read_config(config_file)
     api_key, bucket_name, service_key, countries, years = get_config_values(config_parser)

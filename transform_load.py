@@ -129,7 +129,6 @@ def upload_to_database(holiday_table, holiday_state_type_table, conn):
 
 def main():
     config_file = os.environ.get("WH_CONFIG")
-    #config_file = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
 
     config_parser = read_config(config_file)
     database, user, password, host, port, bucket_name, countries, years, service_key = get_config_values(config_parser)

@@ -3,6 +3,7 @@ import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from ast import literal_eval
+import os
 
 def get_config_values(config_parser):
     try:
@@ -59,8 +60,9 @@ def create_body(raw_data):
     return body
 
 def main():
-    CONFIG_FILE = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
-    config_parser = read_config(CONFIG_FILE)
+    config_file = os.environ.get("WH_CONFIG")
+
+    config_parser = read_config(config_file)
     sender, email_password, recipients, countries, types, database, user, sql_password, host, port = get_config_values(config_parser)
     conn = get_connection(user, sql_password, host, port, database)
     week = next_week()
