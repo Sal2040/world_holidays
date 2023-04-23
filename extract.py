@@ -5,6 +5,7 @@ import os
 from helpers import read_config, next_year, blob_names
 from ast import literal_eval
 
+# Get configuration values from the config file
 def get_config_values(config_parser):
     try:
         api_key = config_parser.get("request_config", "api_key")
@@ -19,6 +20,7 @@ def get_config_values(config_parser):
         years = next_year()
     return api_key, bucket_name, service_key, countries, years
 
+# Fetch holidays data using Calendarific API
 def fetch_holidays(api_key, year, country):
     url = f"https://calendarific.com/api/v2/holidays?&api_key={api_key}&country={country}&year={year}"
     try:
@@ -37,6 +39,7 @@ def fetch_holidays(api_key, year, country):
         print("Holidays fetched.")
         return json.dumps(result)
 
+# Upload fetched holidays data to Google Cloud Storage
 def upload_to_storage(content, bucket_name, destination_blob_name):
     try:
         storage_client = storage.Client()
@@ -48,10 +51,12 @@ def upload_to_storage(content, bucket_name, destination_blob_name):
         print(f"Error uploading to storage: {e}")
         raise
 
+# Main function
 def main():
-    CONFIG_FILE = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
+    config_file = os.environ.get("WH_CONFIG")
+#    config_file = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
 
-    config_parser = read_config(CONFIG_FILE)
+    config_parser = read_config(config_file)
     api_key, bucket_name, service_key, countries, years = get_config_values(config_parser)
 
     if service_key:
