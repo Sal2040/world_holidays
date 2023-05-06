@@ -1,12 +1,15 @@
 import pandas as pd
 import json
 from google.cloud import storage
-from helpers import dict_to_list, df_to_sql, read_config, next_year, blob_names, get_connection
+from helpers import read_config, next_year, blob_names, get_connection
 from sqlalchemy import text
 import os
 from ast import literal_eval
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import table, column
 
+# Get configuration values from the config file
 def get_config_values(config_parser):
     try:
         database = config_parser.get("sql_config", "database")
@@ -25,6 +28,7 @@ def get_config_values(config_parser):
         years = next_year()
     return database, user, password, host, port, bucket_name, countries, years, service_key
 
+# Fetch content from Google Cloud Storage bucket
 def fetch_content(bucket_name, source_blob):
     try:
         storage_client = storage.Client()
@@ -36,6 +40,7 @@ def fetch_content(bucket_name, source_blob):
         print(f"Error fetching data from storage: {e}")
         raise
 
+# Get the last index from the HOLIDAY table in the database
 def last_index(conn):
     query_string = text("SELECT MAX(HOLIDAY_ID) FROM HOLIDAY")
     try:
@@ -50,6 +55,7 @@ def last_index(conn):
     else:
         return 0
 
+# Convert JSON content to a pandas DataFrame
 def json_to_df(content):
     name = []
     description = []
@@ -79,6 +85,7 @@ def json_to_df(content):
     })
     return data
 
+# Generate indices for holidays in the DataFrame
 def generate_indices(df, first_index):
     indices_dict = {}
     indices_list = []
@@ -93,6 +100,14 @@ def generate_indices(df, first_index):
             top_index += 1
     return indices_list
 
+# Convert a dictionary to a list if it is a dictionary, otherwise return the input unchanged
+def dict_to_list(dictionary):
+    if isinstance(dictionary, dict):
+        return list(dictionary.values())
+    else:
+        return dictionary
+
+# Construct holiday and holiday_state_type tables from the input DataFrame
 def construct_tables(df, indices):
     df['holiday_id'] = indices
     df['country'] = df['country'].apply(dict_to_list)
@@ -112,7 +127,26 @@ def construct_tables(df, indices):
 
     return holiday_table, holiday_state_type_table
 
+# Insert DataFrame content into the specified SQL table, with optional return values
+def df_to_sql(df, sql_table, conn, returning_col=None):
+    if not df.empty:
+        columns = [column(i) for i in df.columns]
+        my_table = table(sql_table, *columns)
+        insert_stmt = insert(my_table).values(list(df.itertuples(name=None, index=False)))
+        if returning_col:
+            insert_stmt = insert_stmt.returning(my_table.c[returning_col])
+        do_nothing_stmt = insert_stmt.on_conflict_do_nothing()
+        try:
+            res = conn.execute(do_nothing_stmt)
+        except SQLAlchemyError as e:
+            raise SQLAlchemyError(f"An error occurred while inserting data: {e}")
+        if returning_col:
+            return res.fetchall()
+    else:
+        print("Nothing uploaded. Emtpy DataFrame.")
+        return []
 
+# Upload holiday_table and holiday_state_type_table to the database
 def upload_to_database(holiday_table, holiday_state_type_table, conn):
     holiday_loaded_ids = df_to_sql(df=holiday_table,
                                sql_table='holiday',
@@ -127,6 +161,7 @@ def upload_to_database(holiday_table, holiday_state_type_table, conn):
     print(f"{len(holiday_loaded_ids)} out of {len(holiday_table)} uploaded to database.")
     print(f"{len(holiday_state_type_loaded_ids)} out of {len(holiday_state_type_table)} uploaded to database.")
 
+# Main function to execute the script
 def main():
     config_file = os.environ.get("WH_CONFIG")
 

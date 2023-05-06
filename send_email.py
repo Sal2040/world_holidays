@@ -1,10 +1,15 @@
-from helpers import send_email, read_config, get_connection, next_week
+from helpers import read_config, get_connection
 import pandas as pd
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from ast import literal_eval
 import os
+import datetime as dt
+import smtplib
+from email.mime.text import MIMEText
 
+
+# Get configuration values from the config file
 def get_config_values(config_parser):
     try:
         sender = config_parser.get("gmail_config", "sender")
@@ -22,6 +27,11 @@ def get_config_values(config_parser):
         raise
     return sender, email_password, recipients, countries, types, database, user, sql_password, host, port
 
+# Calculate the next week's number
+def next_week():
+    return dt.datetime.now().isocalendar()[1]+1
+
+# Fetch data for specified week, types, and countries from the database
 def fetch_data(conn, week, types, countries):
     query_string = text(
             """
@@ -51,6 +61,7 @@ def fetch_data(conn, week, types, countries):
     conn.close()
     return data
 
+# Create the email body using fetched data
 def create_body(raw_data):
     if len(raw_data)==0:
         body = "No holidays this week"
@@ -59,6 +70,18 @@ def create_body(raw_data):
         body = data.to_string()
     return body
 
+# Send email with the given subject and body
+def send_email(subject, body, sender, recipients, password):
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = sender
+    msg['To'] = ', '.join(recipients)
+    smtp_server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+    smtp_server.login(sender, password)
+    smtp_server.sendmail(sender, recipients, msg.as_string())
+    smtp_server.quit()
+
+# Main function to execute the script
 def main():
     config_file = os.environ.get("WH_CONFIG")
 
@@ -68,7 +91,7 @@ def main():
     week = next_week()
     raw_data = fetch_data(conn, week, types, countries)
     body = create_body(raw_data)
-    subject = f"Holidays on {next_week}th week"
+    subject = f"Holidays on {week}th week"
     send_email(subject, body, sender, recipients, email_password)
 
 if __name__=="__main__":
