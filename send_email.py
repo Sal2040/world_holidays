@@ -12,9 +12,9 @@ from email.mime.text import MIMEText
 # Get configuration values from the config file
 def get_config_values(config_parser):
     try:
-        sender = config_parser.get("gmail_config", "sender")
-        email_password = config_parser.get("gmail_config", "password")
-        recipients = literal_eval(config_parser.get("gmail_config", "recipients"))
+        sender = config_parser.get("smtp_config", "sender")
+        email_password = config_parser.get("smtp_config", "password")
+        recipients = literal_eval(config_parser.get("smtp_config", "recipients"))
         countries = literal_eval(config_parser.get("query_config", "countries"))
         types = literal_eval(config_parser.get("query_config", "types"))
         database = config_parser.get("sql_config", "database")
