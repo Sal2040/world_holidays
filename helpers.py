@@ -5,7 +5,11 @@ from sqlalchemy import create_engine
 
 def read_config(config_file):
     config_parser = configparser.ConfigParser()
-    config_parser.read(config_file)
+    try:
+        config_parser.read(config_file)
+    except configparser.Error as e:
+        print(f"Reading from the config file failed: {e}")
+        raise
     return config_parser
 
 def next_year():
