@@ -17,7 +17,7 @@ git clone https://github.com/your_username/world_holidays.git
 
 2. Install the required packages:
 ```bash
-pip install -r requirements.txt
+pip install -r <path_to_your_directory>/world_holidays/requirements.txt
 ```
 
 3. Start psql as a user of your choice and run the create_database.sql script:
