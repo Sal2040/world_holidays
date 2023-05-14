@@ -18,8 +18,8 @@ def get_config_values(config_parser):
         host = config_parser.get("sql_config", "host")
         port = config_parser.get("sql_config", "port")
         bucket_name = config_parser.get("bucket_config", "bucket_name")
-        countries = literal_eval(config_parser.get("request_config", "countries"))
-        years = literal_eval(config_parser.get("request_config", "years"))
+        countries = literal_eval(config_parser.get("extract_config", "countries"))
+        years = literal_eval(config_parser.get("extract_config", "years"))
         service_key = config_parser.get("bucket_config", "service_key")
     except Exception as e:
         print(f"Reading configuration failed: {e}")
@@ -111,9 +111,9 @@ def dict_to_list(dictionary):
 def construct_tables(df, indices):
     df['holiday_id'] = indices
     df['country'] = df['country'].apply(dict_to_list)
-    df[['country_id','country']] = pd.DataFrame(df['country'].to_list())
+    df[['country_code','country']] = pd.DataFrame(df['country'].to_list())
 
-    holiday_table = df[['holiday_id','name','description','country','date']]
+    holiday_table = df[['holiday_id','name','description','country','country_code','date']]
     holiday_table = holiday_table.drop_duplicates(subset='holiday_id')
 
     holiday_state_type_table = df[['holiday_id', 'state', 'type']].explode('state')

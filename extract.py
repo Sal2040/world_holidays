@@ -8,11 +8,11 @@ from ast import literal_eval
 # Get configuration values from the config file
 def get_config_values(config_parser):
     try:
-        api_key = config_parser.get("request_config", "api_key")
+        api_key = config_parser.get("extract_config", "api_key")
         bucket_name = config_parser.get("bucket_config", "bucket_name")
         service_key = config_parser.get("bucket_config", "service_key")
-        countries = literal_eval(config_parser.get("request_config", "countries"))
-        years = literal_eval(config_parser.get("request_config", "years"))
+        countries = literal_eval(config_parser.get("extract_config", "countries"))
+        years = literal_eval(config_parser.get("extract_config", "years"))
     except Exception as e:
         print(f"Reading configuration failed: {e}")
         raise

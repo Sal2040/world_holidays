@@ -14,18 +14,24 @@ def get_config_values(config_parser):
     try:
         sender = config_parser.get("smtp_config", "sender")
         email_password = config_parser.get("smtp_config", "password")
-        recipients = literal_eval(config_parser.get("smtp_config", "recipients"))
-        countries = literal_eval(config_parser.get("query_config", "countries"))
-        types = literal_eval(config_parser.get("query_config", "types"))
+        recipients = literal_eval(config_parser.get("email_config", "recipients"))
+        countries = literal_eval(config_parser.get("email_config", "countries"))
+        if not countries:
+            countries = literal_eval(config_parser.get("extract_config", "countries"))
+        countries = tuple(countries)
+        types = literal_eval(config_parser.get("email_config", "types"))
+        types = tuple(types)
         database = config_parser.get("sql_config", "database")
         user = config_parser.get("sql_config", "user")
         sql_password = config_parser.get("sql_config", "password")
         host = config_parser.get("sql_config", "host")
-        port = config_parser.get("sql_config", "port")
+        sql_port = config_parser.get("sql_config", "port")
+        smtp_port = config_parser.get("smtp_config", "port")
+        smtp_server = config_parser.get("smtp_config", "server")
     except Exception as e:
         print(f"Reading configuration failed: {e}")
         raise
-    return sender, email_password, recipients, countries, types, database, user, sql_password, host, port
+    return sender, email_password, recipients, countries, types, database, user, sql_password, host, sql_port, smtp_port, smtp_server
 
 # Calculate the next week's number
 def next_week():
@@ -48,7 +54,7 @@ def fetch_data(conn, week, types, countries):
             AND
             b.type IN :types
             AND
-            a.country IN :countries
+            a.country_code IN :countries
             ORDER BY a.date
             """
             )
@@ -71,16 +77,17 @@ def create_body(raw_data):
     return body
 
 # Send email with the given subject and body
-def send_email(subject, body, sender, recipients, password):
+def send_email(subject, body, sender, recipients, password, smtp_port, smtp_server):
     try:
         msg = MIMEText(body)
         msg['Subject'] = subject
         msg['From'] = sender
         msg['To'] = ', '.join(recipients)
-        smtp_server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        smtp_server = smtplib.SMTP_SSL(smtp_server, smtp_port)
         smtp_server.login(sender, password)
         smtp_server.sendmail(sender, recipients, msg.as_string())
         smtp_server.quit()
+        print("Email sent.")
     except smtplib.SMTPException as e:
         print(f"An error occurred while sending the email: {e}")
         raise
@@ -90,13 +97,13 @@ def main():
     config_file = os.environ.get("WH_CONFIG")
 
     config_parser = read_config(config_file)
-    sender, email_password, recipients, countries, types, database, user, sql_password, host, port = get_config_values(config_parser)
-    conn = get_connection(user, sql_password, host, port, database)
+    sender, email_password, recipients, countries, types, database, user, sql_password, host, sql_port, smtp_port, smtp_server = get_config_values(config_parser)
+    conn = get_connection(user, sql_password, host, sql_port, database)
     week = next_week()
     raw_data = fetch_data(conn, week, types, countries)
     body = create_body(raw_data)
     subject = f"Holidays on {week}th week"
-    send_email(subject, body, sender, recipients, email_password)
+    send_email(subject, body, sender, recipients, email_password, smtp_port, smtp_server)
 
 if __name__=="__main__":
     main()

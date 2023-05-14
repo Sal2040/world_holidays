@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS holiday(
     name VARCHAR NOT NULL,
     description VARCHAR,
     country VARCHAR NOT NULL,
+    country_code CHAR(2),
     date TIMESTAMP WITH TIME ZONE NOT NULL,
     UNIQUE (name, country, date)
 );
