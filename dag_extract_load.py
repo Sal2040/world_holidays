@@ -3,6 +3,10 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 import os
 
+HOME_DIR = os.environ.get("WH_HOME")
+EXTRACT_SCRIPT = os.path.join(HOME_DIR, 'extract.py')
+TRANSFORM_LOAD_SCRIPT = os.path.join(HOME_DIR, 'transform_load.py')
+
 with DAG(
     dag_id="wh_extract_load",
     default_args={
@@ -21,19 +25,14 @@ with DAG(
     tags=["wh"],
     ) as dag:
 
-    env_vars = os.environ.copy()
-    env_vars['WH_CONFIG'] = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
-
     t1 = BashOperator(
         task_id="extract",
-        bash_command="python /home/sal/PROJEKTY_CV/world_holidays/extract.py",
-        env=env_vars
+        bash_command=f"python {EXTRACT_SCRIPT}",
     )
 
     t2 = BashOperator(
         task_id="load",
-        bash_command="python /home/sal/PROJEKTY_CV/world_holidays/transform_load.py",
-        env=env_vars
+        bash_command=f"python {TRANSFORM_LOAD_SCRIPT}",
     )
 
     t1 >> t2

@@ -163,9 +163,10 @@ def upload_to_database(holiday_table, holiday_state_type_table, conn):
 
 # Main function to execute the script
 def main():
-    config_file = os.environ.get("WH_CONFIG")
+    HOME_DIR = os.environ.get("WH_HOME")
+    CONFIG_FILE = os.path.join(HOME_DIR, 'pipeline.conf')
 
-    config_parser = read_config(config_file)
+    config_parser = read_config(CONFIG_FILE)
     database, user, password, host, port, bucket_name, countries, years, service_key = get_config_values(config_parser)
     if service_key:
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = service_key

@@ -3,6 +3,9 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 import os
 
+HOME_DIR = os.environ.get("WH_HOME")
+SEND_EMAIL_SCRIPT = os.path.join(HOME_DIR, 'send_email.py')
+
 with DAG(
     dag_id="wh_send_email",
     default_args={
@@ -21,13 +24,9 @@ with DAG(
     tags=["wh"],
     ) as dag:
 
-    env_vars = os.environ.copy()
-    env_vars['WH_CONFIG'] = '/home/sal/PROJEKTY_CV/world_holidays/pipeline.conf'
-
     t1 = BashOperator(
         task_id="extract",
-        bash_command="python /home/sal/PROJEKTY_CV/world_holidays/send_email.py",
-        env=env_vars
+        bash_command=f"python {SEND_EMAIL_SCRIPT}"
     )
 
     t1

@@ -94,9 +94,10 @@ def send_email(subject, body, sender, recipients, password, smtp_port, smtp_serv
 
 # Main function to execute the script
 def main():
-    config_file = os.environ.get("WH_CONFIG")
+    HOME_DIR = os.environ.get("WH_HOME")
+    CONFIG_FILE = os.path.join(HOME_DIR, 'pipeline.conf')
 
-    config_parser = read_config(config_file)
+    config_parser = read_config(CONFIG_FILE)
     sender, email_password, recipients, countries, types, database, user, sql_password, host, sql_port, smtp_port, smtp_server = get_config_values(config_parser)
     conn = get_connection(user, sql_password, host, sql_port, database)
     week = next_week()
