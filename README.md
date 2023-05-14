@@ -44,8 +44,8 @@ psql -U <username>
 
 8. Configure
 *  Create a pipeline.conf file in the project directory to store your configurations. Use the provided pipeline_empty.conf as a template.
-*  Set the WH_CONFIG environment variable to the path of your pipeline.conf file:
+*  Set the WH_HOME environment variable to the path of your project directory:
 ```
-export WH_CONFIG=path/to/pipeline.conf
+export WH_HOME=<path_to_your_directory>/world_holidays
 ```
 
