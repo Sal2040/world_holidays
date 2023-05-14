@@ -8,6 +8,7 @@ This project is designed to fetch holiday data from the Calendarific API, store 
 * PostgreSQL
 * Airflow
 * Active GCP project
+* Email client that provides access to its SMTP server (e.g. Gmail or Yahoo) 
 
 ## Local Setup:
 1. Clone the repository
@@ -32,4 +33,19 @@ psql -U <username>
 * Create and download [service account key](https://cloud.google.com/iam/docs/keys-create-delete)
 
 5. Sign up with https://calendarific.com/ in order to get an api key.
+
+6. Acquire SMTP credentials from your email service.
+   If you use gmail, use the following:  
+   * SSL Port:    465
+   * Server Name: smtp.gmail.com
+   * Generate application password as shown [here](https://support.google.com/mail/answer/185833?hl=en-GB).
+   
+7. Set up Airflow following the instructions [here](https://airflow.apache.org/docs/apache-airflow/stable/start.html)
+
+8. Configure
+*  Create a pipeline.conf file in the project directory to store your configurations. Use the provided pipeline_empty.conf as a template.
+*  Set the WH_CONFIG environment variable to the path of your pipeline.conf file:
+```
+export WH_CONFIG=path/to/pipeline.conf
+```
 
