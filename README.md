@@ -1,6 +1,6 @@
 # World Holidays
 
-This project is designed to fetch holiday data from the Calendarific API, store it in Google Cloud Storage, and send weekly emails with upcoming holidays based on the specified countries and holiday types. The project consists of five Python scripts and an Airflow DAG.
+This project is designed to fetch holiday data from the Calendarific API once in a year, store it in Google Cloud Storage (GCS), and send weekly emails with upcoming holidays based on the specified countries and holiday types. The project consists of five Python scripts and an Airflow DAG. It is intended to be run either locally or on the [Google Cloud Platforfm (GCP)](https://cloud.google.com/gcp?utm_source=google&utm_medium=cpc&utm_campaign=emea-cz-all-cs-bkws-all-all-trial-e-gcp-1011340&utm_content=text-ad-none-any-DEV_c-CRE_548660727555-ADGP_Hybrid+%7C+BKWS+-+EXA+%7C+Txt+~+GCP+~+General%23v2-KWID_43700060393213358-aud-606988877894:kwd-26415313501-userloc_9062851&utm_term=KW_google+cloud+platform-NET_g-PLAC_&&gad=1&gclid=CjwKCAjwpayjBhAnEiwA-7ena56fLx2D2_om6IAJOBTECWAKDfPhWzi7O3QWmXk-SE7aeqLKtxTUphoCS60QAvD_BwE&gclsrc=aw.ds&hl=en).
 
 ## Requirements
 * Python 3.6+
@@ -59,7 +59,12 @@ For cloud-only deployment on the GCP, the local instances of PostgreSQL and Airf
 
 1. PostgeSQL
    * create a [Cloud SQL instance](https://cloud.google.com/sql/docs/postgres/create-instance)
-   * make sure to configure the instance with [private service access](https://cloud.google.com/vpc/docs/private-services-access) so you can connect to it from within your GCP project via [private ip](https://cloud.google.com/sql/docs/postgres/private-ip). This way, the localhost and port in the configuration.conf can simply be replaced with their cloud equivalents, without using Cloud SQL Auth proxy or authorized networks.
+   * make sure to configure the instance with [private service access](https://cloud.google.com/vpc/docs/private-services-access) so you can connect to it from within your GCP project via [private ip](https://cloud.google.com/sql/docs/postgres/private-ip). This way, the localhost and port in the configuration.conf can simply be replaced with their cloud equivalents.
+   * Install and run [Cloud SQL Auth proxy](https://cloud.google.com/sql/docs/postgres/connect-instance-auth-proxy) and follow step 3. from the Local Setup above.
   
-2. Airflow
+2. Airflow  
+
+   There are two options for setting up a cloud instance of Airflow:
+   * [Google Cloud Composer](https://cloud.google.com/composer/docs) - this solution has the advantage of being a fully preinstalled and production-ready. Nevertheless, [dependency conflicts](https://cloud.google.com/composer/docs/composer-2/troubleshooting-package-installation) are almost certain to appear and the solution is not trivial. It is also not possible to simply turn the instance on and off to save costs when it is not needed. It has to be completely deleted and set up again later.
+   * Manually installing Airflow on [Virtual Machine](https://cloud.google.com/compute/docs). Whereas this solutions is not suitable for serious production applications, it is good enough for a dummy project. In this case, the steps outlined in the Local Setup above can be simply repeated on the Virtual Machine.  
    
