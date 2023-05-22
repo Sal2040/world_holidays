@@ -28,7 +28,7 @@ psql -U <username>
 ```
 
 4. Set up GCS:
-* Create a GCS [bucket](https://cloud.google.com/storage/docs/discover-object-storage-console)
+* Create a [GCS bucket](https://cloud.google.com/storage/docs/discover-object-storage-console)
 * Set up a [service account](https://cloud.google.com/iam/docs/service-accounts-create) with "Storage Admin" role
 * Create and download [service account key](https://cloud.google.com/iam/docs/keys-create-delete)
 
@@ -45,7 +45,21 @@ psql -U <username>
 8. Configure
 *  Create a pipeline.conf file in the project directory to store your configurations. Use the provided pipeline_empty.conf as a template.
 *  Set the WH_HOME environment variable to the path of your project directory:
-```
+```bash
 export WH_HOME=<path_to_your_directory>/world_holidays
 ```
 
+9. Run Airflow standalone.
+```bash
+airflow standalone
+```
+
+## Cloud Setup:
+For cloud-only deployment on the GCP, the local instances of PostgreSQL and Airflow need to be replaced with their cloud equivalents.
+
+1. PostgeSQL
+   * create a [Cloud SQL instance](https://cloud.google.com/sql/docs/postgres/create-instance)
+   * make sure to configure the instance with [private service access](https://cloud.google.com/vpc/docs/private-services-access) so you can connect to it from within your GCP project via [private ip](https://cloud.google.com/sql/docs/postgres/private-ip). This way, the localhost and port in the configuration.conf can simply be replaced with their cloud equivalents, without using Cloud SQL Auth proxy or authorized networks.
+  
+2. Airflow
+   
