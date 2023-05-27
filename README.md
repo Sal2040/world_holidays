@@ -57,7 +57,7 @@ psql -U <username>
    * Server Name: smtp.gmail.com
    * Generate application password as shown [here](https://support.google.com/mail/answer/185833?hl=en-GB).
    
-7. Set up Airflow following the instructions [here](https://airflow.apache.org/docs/apache-airflow/stable/start.html)
+7. Set up Airflow following the instructions [here](https://airflow.apache.org/docs/apache-airflow/stable/start.html). Move DAGs to `AIRFLOW_HOME`.
 
 8. Configure
 *  Create a pipeline.conf file in the project directory to store your configurations. Use the provided pipeline_empty.conf as a template.
