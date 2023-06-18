@@ -30,7 +30,7 @@ Configuration:
 ## Local Setup:
 1. Clone the repository
 ```bash
-git clone https://github.com/your_username/world_holidays.git
+git clone https://github.com/Sal2040/world_holidays.git
 ```
 
 2. Install the required packages:
